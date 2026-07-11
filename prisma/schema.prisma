@@ -32,6 +32,7 @@ model Clinic {
   agentTone           String                @default("professional")
   agentDescription    String?
   timezone            String                @default("America/Sao_Paulo")
+  logoUrl             String?               // logo da clínica (cabeçalho de receitas/documentos)
   menuPermissions     String?               // JSON: {"RECEPTIONIST":["/agenda",...], "DOCTOR":[...]}
   users               User[]
   doctors             Doctor[]
@@ -197,6 +198,22 @@ model Attachment {
   path          String   // caminho no bucket do Supabase Storage
   uploadedBy    String?
   createdAt     DateTime @default(now())
+
+  @@index([clinicId, patientId])
+}
+
+model Prescription {
+  // Receita: conteúdo + PDF gerado (salvo no storage), histórico na ficha
+  id         String   @id @default(cuid())
+  clinicId   String
+  patientId  String
+  doctorId   String?
+  doctorName String?
+  doctorCrm  String?
+  content    String
+  pdfPath    String?  // caminho do PDF no Supabase Storage
+  createdBy  String?
+  createdAt  DateTime @default(now())
 
   @@index([clinicId, patientId])
 }
