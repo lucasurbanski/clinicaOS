@@ -6,6 +6,7 @@ import { ArrowLeft, Phone, Mail, Calendar, DollarSign, Clock, Tag, Pencil } from
 import { cn, formatDate, formatCurrency, formatDateTime, formatDateTimeNaive, PROFILE_COLORS, PROFILE_LABELS, STATUS_COLORS, STATUS_LABELS } from "@/lib/utils";
 import PatientAttachments from "@/components/PatientAttachments";
 import PatientMedicalRecords from "@/components/PatientMedicalRecords";
+import PatientPrescriptions from "@/components/PatientPrescriptions";
 
 function Timeline({ interactions }: { interactions: any[] }) {
   const TYPE_ICONS: Record<string, string> = {
@@ -140,6 +141,7 @@ export default function PatientDetailPage() {
         {/* Consultas */}
         <div className="lg:col-span-2 space-y-4">
           <PatientMedicalRecords patientId={patient.id} />
+          <PatientPrescriptions patientId={patient.id} />
           <PatientAttachments patientId={patient.id} />
           {/* Próximas */}
           {upcoming.length > 0 && (
