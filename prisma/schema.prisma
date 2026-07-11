@@ -201,6 +201,25 @@ model Attachment {
   @@index([clinicId, patientId])
 }
 
+model MedicalRecord {
+  // Prontuário: registro clínico por atendimento (SOAP simplificado)
+  id             String   @id @default(cuid())
+  clinicId       String
+  patientId      String
+  appointmentId  String?
+  doctorId       String?
+  doctorName     String?  // snapshot para exibição no histórico
+  chiefComplaint String?  // queixa principal
+  evolution      String?  // evolução / história clínica
+  assessment     String?  // avaliação / diagnóstico / CID
+  plan           String?  // conduta / prescrição
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([clinicId, patientId])
+}
+
 // paymentMethod: CARD | CASH | INSURANCE
 model ServicePricing {
   id            String   @id @default(cuid())

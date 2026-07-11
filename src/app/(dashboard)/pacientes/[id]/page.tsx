@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Phone, Mail, Calendar, DollarSign, Clock, Tag, Pencil } from "lucide-react";
 import { cn, formatDate, formatCurrency, formatDateTime, formatDateTimeNaive, PROFILE_COLORS, PROFILE_LABELS, STATUS_COLORS, STATUS_LABELS } from "@/lib/utils";
 import PatientAttachments from "@/components/PatientAttachments";
+import PatientMedicalRecords from "@/components/PatientMedicalRecords";
 
 function Timeline({ interactions }: { interactions: any[] }) {
   const TYPE_ICONS: Record<string, string> = {
@@ -183,6 +184,7 @@ export default function PatientDetailPage() {
             </div>
           </div>
 
+          <PatientMedicalRecords patientId={patient.id} />
           <PatientAttachments patientId={patient.id} />
         </div>
 
