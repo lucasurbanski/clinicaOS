@@ -261,15 +261,15 @@ function PacientesPageInner() {
           {patients.map((p: any) => (
             <div key={p.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] px-5 py-3.5 border-b border-border/50 hover:bg-muted/20 transition-colors items-center">
               <div>
-                <div className="flex items-center gap-2">
+                <Link href={`/pacientes/${p.id}`} className="flex items-center gap-2 group w-fit">
                   <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary">
                     {p.name.split(" ").slice(0, 2).map((n: string) => n[0]).join("")}
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{p.name}</p>
+                    <p className="text-sm font-medium group-hover:text-primary group-hover:underline transition-colors">{p.name}</p>
                     {p.insurance && <p className="text-xs text-muted-foreground">{p.insurance}</p>}
                   </div>
-                </div>
+                </Link>
                 <div className="flex gap-1 mt-1.5 ml-9">
                   <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", PROFILE_COLORS[p.profile])}>
                     {PROFILE_LABELS[p.profile]}
