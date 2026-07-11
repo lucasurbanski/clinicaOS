@@ -7,6 +7,7 @@ import { cn, formatDate, formatCurrency, formatDateTime, formatDateTimeNaive, PR
 import PatientAttachments from "@/components/PatientAttachments";
 import PatientMedicalRecords from "@/components/PatientMedicalRecords";
 import PatientPrescriptions from "@/components/PatientPrescriptions";
+import PatientAiSummary from "@/components/PatientAiSummary";
 
 function Timeline({ interactions }: { interactions: any[] }) {
   const TYPE_ICONS: Record<string, string> = {
@@ -140,6 +141,7 @@ export default function PatientDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Consultas */}
         <div className="lg:col-span-2 space-y-4">
+          <PatientAiSummary patientId={patient.id} />
           <PatientMedicalRecords patientId={patient.id} />
           <PatientPrescriptions patientId={patient.id} />
           <PatientAttachments patientId={patient.id} />
