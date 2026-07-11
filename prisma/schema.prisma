@@ -184,6 +184,23 @@ model ClinicCalendarException {
   @@index([clinicId, date])
 }
 
+model Attachment {
+  // type: EXAM | PRESCRIPTION | DOCUMENT | OTHER
+  id            String   @id @default(cuid())
+  clinicId      String
+  patientId     String?
+  appointmentId String?
+  type          String   @default("DOCUMENT")
+  fileName      String
+  mimeType      String?
+  size          Int?
+  path          String   // caminho no bucket do Supabase Storage
+  uploadedBy    String?
+  createdAt     DateTime @default(now())
+
+  @@index([clinicId, patientId])
+}
+
 // paymentMethod: CARD | CASH | INSURANCE
 model ServicePricing {
   id            String   @id @default(cuid())
