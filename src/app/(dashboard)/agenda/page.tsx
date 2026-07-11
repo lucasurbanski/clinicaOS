@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, Plus, X, Check, Clock, AlertCircle, FileText
 import { cn, STATUS_COLORS, STATUS_LABELS } from "@/lib/utils";
 import { fetcher } from "@/lib/fetcher";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 
 const STATUS_ICON: Record<string, any> = {
   CONFIRMED: <Check className="w-3 h-3" />,
@@ -603,12 +604,17 @@ export default function AgendaPage() {
             </div>
             <div className="px-5 py-4 border-b border-border flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-sm">{selectedApt.patient?.name}</h3>
+                <Link href={`/pacientes/${selectedApt.patient?.id}`} className="font-semibold text-sm hover:text-primary hover:underline">
+                  {selectedApt.patient?.name}
+                </Link>
                 <p className="text-xs text-muted-foreground">{aptTime(selectedApt.dateTime)}</p>
               </div>
               <button onClick={() => setSelectedApt(null)}><X className="w-4 h-4 text-muted-foreground" /></button>
             </div>
             <div className="p-5 space-y-3 text-sm">
+              <Link href={`/pacientes/${selectedApt.patient?.id}`} className="flex items-center justify-center gap-1.5 w-full py-2 bg-primary/10 text-primary text-xs font-semibold rounded-lg hover:bg-primary/20 transition-colors">
+                <FileText className="w-3.5 h-3.5" /> Abrir ficha do paciente
+              </Link>
               <div className="flex justify-between"><span className="text-muted-foreground">Serviço</span><span className="font-medium">{selectedApt.service?.name || "—"}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Médico</span><span className="font-medium">{selectedApt.doctor?.name}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Convênio</span><span className="font-medium">{selectedApt.insurance || "Particular"}</span></div>
