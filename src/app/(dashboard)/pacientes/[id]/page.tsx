@@ -139,6 +139,8 @@ export default function PatientDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Consultas */}
         <div className="lg:col-span-2 space-y-4">
+          <PatientMedicalRecords patientId={patient.id} />
+          <PatientAttachments patientId={patient.id} />
           {/* Próximas */}
           {upcoming.length > 0 && (
             <div className="bg-white rounded-xl border border-border">
@@ -184,8 +186,6 @@ export default function PatientDetailPage() {
             </div>
           </div>
 
-          <PatientMedicalRecords patientId={patient.id} />
-          <PatientAttachments patientId={patient.id} />
         </div>
 
         {/* Timeline */}
