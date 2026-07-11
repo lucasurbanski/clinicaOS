@@ -38,25 +38,38 @@ export async function POST(_: NextRequest, { params }: { params: { id: string } 
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
   const patientId = params.id;
+
+  // ISOLAMENTO ENTRE MÉDICOS: um médico só pode ver o SEU próprio histórico com
+  // o paciente. Filtramos no dado (não na IA) — os registros de outros médicos
+  // nem chegam ao modelo. ADMIN/SUPER_ADMIN (gestão da clínica) veem tudo.
+  // DOCTOR sem doctorId (mal configurado) → sentinela que não casa com nada
+  // (vê nada, nunca o histórico dos outros).
+  const scopeDoctorId = user.role === "DOCTOR" ? user.doctorId || "__none__" : null;
+  const docFilter = scopeDoctorId ? { doctorId: scopeDoctorId } : {};
+
   const [patient, appts, records, rxs, interactions] = await Promise.all([
     prisma.patient.findUnique({ where: { id: patientId }, select: { name: true, birthDate: true, clinicId: true } }),
     prisma.appointment.findMany({
-      where: { clinicId, patientId },
+      where: { clinicId, patientId, ...docFilter },
       orderBy: { dateTime: "desc" }, take: 15,
       select: { dateTime: true, status: true, service: { select: { name: true } }, doctor: { select: { name: true, specialty: true } } },
     }),
     prisma.medicalRecord.findMany({
-      where: { clinicId, patientId }, orderBy: { createdAt: "desc" }, take: 10,
+      where: { clinicId, patientId, ...docFilter }, orderBy: { createdAt: "desc" }, take: 10,
       select: { createdAt: true, doctorName: true, chiefComplaint: true, evolution: true, assessment: true, plan: true },
     }),
     prisma.prescription.findMany({
-      where: { clinicId, patientId }, orderBy: { createdAt: "desc" }, take: 10,
+      where: { clinicId, patientId, ...docFilter }, orderBy: { createdAt: "desc" }, take: 10,
       select: { createdAt: true, doctorName: true, content: true },
     }),
-    prisma.patientInteraction.findMany({
-      where: { patientId }, orderBy: { date: "desc" }, take: 15,
-      select: { date: true, type: true, description: true },
-    }),
+    // Interações não têm doctorId (são de nível clínica, ex.: lembretes/faltas) e
+    // podem referenciar consultas de outros médicos — só entram na visão de gestão.
+    scopeDoctorId
+      ? Promise.resolve([] as { date: Date; type: string; description: string }[])
+      : prisma.patientInteraction.findMany({
+          where: { patientId }, orderBy: { date: "desc" }, take: 15,
+          select: { date: true, type: true, description: true },
+        }),
   ]);
   if (!patient || patient.clinicId !== clinicId)
     return NextResponse.json({ error: "Paciente não encontrado" }, { status: 404 });
@@ -73,6 +86,9 @@ export async function POST(_: NextRequest, { params }: { params: { id: string } 
   }
 
   const lines: string[] = [`Paciente: ${patient.name}${idade}.`];
+  if (scopeDoctorId) {
+    lines.push("Contexto: este resumo cobre APENAS o histórico do paciente com o médico que está logado agora (não inclui atendimentos com outros profissionais).");
+  }
 
   if (appts.length) {
     lines.push(`\nATENDIMENTOS (${appts.length} mais recentes):`);
@@ -102,7 +118,9 @@ export async function POST(_: NextRequest, { params }: { params: { id: string } 
     for (const i of interactions) lines.push(`- ${fmtDate(i.date)} [${i.type}] ${i.description}`);
   }
   if (appts.length + records.length + rxs.length + interactions.length === 0) {
-    lines.push("\n(Sem histórico registrado — paciente novo ou primeira consulta.)");
+    lines.push(scopeDoctorId
+      ? "\n(Primeiro atendimento deste paciente com você — sem histórico anterior seu registrado.)"
+      : "\n(Sem histórico registrado — paciente novo ou primeira consulta.)");
   }
 
   const patientText = lines.join("\n");

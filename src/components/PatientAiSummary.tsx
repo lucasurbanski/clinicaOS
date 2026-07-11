@@ -14,9 +14,11 @@ export default function PatientAiSummary({ patientId }: { patientId: string }) {
   const [at, setAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const started = useRef(false);
+  const loaded = useRef(false);
 
-  const cacheKey = `aisum:${patientId}`;
+  // Cache por sessão, isolado por usuário logado (não vaza entre médicos no mesmo navegador).
+  const uid = (session?.user as any)?.id || role || "u";
+  const cacheKey = `aisum:${patientId}:${uid}`;
 
   async function generate() {
     setLoading(true); setErr(null);
@@ -29,14 +31,13 @@ export default function PatientAiSummary({ patientId }: { patientId: string }) {
     } catch (e: any) { setErr(e.message); } finally { setLoading(false); }
   }
 
-  // Auto-gera ao abrir o atendimento (usa cache da sessão se já gerou antes).
+  // Ao abrir, apenas reaproveita um resumo já gerado nesta sessão (não gera sozinho — controle de custo).
   useEffect(() => {
-    if (!allowed || started.current) return;
-    started.current = true;
+    if (!allowed || loaded.current) return;
+    loaded.current = true;
     let cached: any = null;
     try { cached = JSON.parse(sessionStorage.getItem(cacheKey) || "null"); } catch {}
     if (cached?.summary) { setSummary(cached.summary); setAt(cached.at); }
-    else generate();
     // eslint-disable-next-line
   }, [patientId, allowed]);
 
@@ -48,11 +49,13 @@ export default function PatientAiSummary({ patientId }: { patientId: string }) {
         <h2 className="text-sm font-semibold flex items-center gap-2 text-violet-800">
           <Sparkles className="w-4 h-4 text-violet-600" /> Resumo do paciente (IA)
         </h2>
-        <button onClick={generate} disabled={loading}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-100 rounded-lg disabled:opacity-50">
-          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-          {loading ? "Gerando..." : "Atualizar"}
-        </button>
+        {(summary || loading) && (
+          <button onClick={generate} disabled={loading}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-100 rounded-lg disabled:opacity-50">
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            {loading ? "Gerando..." : "Atualizar"}
+          </button>
+        )}
       </div>
       <div className="p-5">
         {loading && !summary && (
@@ -73,7 +76,13 @@ export default function PatientAiSummary({ patientId }: { patientId: string }) {
           </>
         )}
         {!loading && !summary && !err && (
-          <p className="text-xs text-muted-foreground">Clique em "Atualizar" para gerar o resumo.</p>
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-xs text-muted-foreground">Gere um resumo do histórico deste paciente com você, feito por IA, para agilizar o atendimento.</p>
+            <button onClick={generate}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+              <Sparkles className="w-3.5 h-3.5" /> Gerar resumo por IA
+            </button>
+          </div>
         )}
       </div>
     </div>
