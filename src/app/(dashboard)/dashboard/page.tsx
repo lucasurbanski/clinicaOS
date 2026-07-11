@@ -100,12 +100,12 @@ export default function DashboardPage() {
               <p className="text-center text-sm text-muted-foreground py-8">Nenhuma consulta hoje</p>
             )}
             {todaySchedule.map((apt: any) => (
-              <div key={apt.id} className="px-5 py-3 flex items-center gap-3">
+              <Link key={apt.id} href={`/pacientes/${apt.patient.id}`} className="px-5 py-3 flex items-center gap-3 hover:bg-muted/30 transition-colors">
                 <span className="text-sm font-semibold text-muted-foreground w-12 flex-shrink-0">
                   {formatTime(apt.dateTime)}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{apt.patient.name}</p>
+                  <p className="text-sm font-medium truncate hover:text-primary">{apt.patient.name}</p>
                   <p className="text-xs text-muted-foreground">{apt.service?.name || "Consulta"}</p>
                 </div>
                 <span className={cn("text-xs px-2 py-0.5 rounded-full border font-medium", STATUS_COLORS[apt.status])}>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
                 <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", PROFILE_COLORS[apt.patient.profile])}>
                   {PROFILE_LABELS[apt.patient.profile]}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
