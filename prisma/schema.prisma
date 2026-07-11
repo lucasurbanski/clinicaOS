@@ -1,0 +1,318 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite não suporta enums nativos — usamos String com valores documentados
+
+model Clinic {
+  id                  String                @id @default(cuid())
+  name                String
+  phone               String?
+  email               String?
+  address             String?
+  openingTime         String                @default("08:00")
+  closingTime         String                @default("18:00")
+  availableDays       String                @default("1,2,3,4,5")
+  defaultDuration     Int                   @default(30)
+  intervalBetween     Int                   @default(10)
+  maxBookingDays      Int                   @default(60)
+  sameDayLeadMinutes  Int                   @default(60)
+  confirmationMessage  String?
+  reminder12hMessage   String?
+  reminderMessage      String?
+  reminder24hEnabled   Boolean               @default(false)
+  reactivationMessage  String?
+  evolutionInstance   String?
+  agentName           String                @default("Vanessa")
+  agentTone           String                @default("professional")
+  agentDescription    String?
+  timezone            String                @default("America/Sao_Paulo")
+  menuPermissions     String?               // JSON: {"RECEPTIONIST":["/agenda",...], "DOCTOR":[...]}
+  users               User[]
+  doctors             Doctor[]
+  patients            Patient[]
+  appointments        Appointment[]
+  services            Service[]
+  crmOpportunities    CRMOpportunity[]
+  insurancePlans      InsurancePlan[]
+  humanTickets        HumanTicket[]
+  serviceScheduleRules ServiceScheduleRule[]
+  calendarExceptions  ClinicCalendarException[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+}
+
+model User {
+  // role: ADMIN | DOCTOR | RECEPTIONIST | SUPER_ADMIN
+  // SUPER_ADMIN has clinicId = null and can access all clinics
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("RECEPTIONIST")
+  clinicId  String?
+  clinic    Clinic?  @relation(fields: [clinicId], references: [id])
+  doctorId  String?
+  doctor    Doctor?  @relation(fields: [doctorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Doctor {
+  id           String        @id @default(cuid())
+  name         String
+  specialty    String?
+  crm          String?
+  phone        String?
+  email        String?
+  active       Boolean       @default(true)
+  availableDays String       @default("1,2,3,4,5")
+  openingTime  String?
+  closingTime  String?
+  clinicId     String
+  clinic       Clinic        @relation(fields: [clinicId], references: [id])
+  appointments Appointment[]
+  users        User[]
+  doctorServices DoctorService[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Patient {
+  // profile: NEW | RECURRING | HIGH_VALUE | INACTIVE | PENDING_RETURN | AT_RISK
+  id                String               @id @default(cuid())
+  name              String
+  cpf               String?
+  phone             String?
+  email             String?
+  birthDate         DateTime?
+  insurance         String?
+  origin            String?
+  notes             String?
+  firstConsultDate  DateTime?
+  lastConsultDate   DateTime?
+  totalSpent        Float                @default(0)
+  totalAppointments Int                  @default(0)
+  avgReturnDays     Int?
+  profile           String               @default("NEW")
+  clinicId          String
+  clinic            Clinic               @relation(fields: [clinicId], references: [id])
+  appointments      Appointment[]
+  interactions      PatientInteraction[]
+  tags              PatientTag[]
+  crmOpportunities  CRMOpportunity[]
+  humanTickets      HumanTicket[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+}
+
+model Appointment {
+  // status: PENDING | CONFIRMED | CANCELLED | COMPLETED | NO_SHOW
+  // type:   CONSULTATION | RETURN | PROCEDURE | EVALUATION
+  id          String    @id @default(cuid())
+  patientId   String
+  patient     Patient   @relation(fields: [patientId], references: [id])
+  doctorId    String
+  doctor      Doctor    @relation(fields: [doctorId], references: [id])
+  serviceId   String?
+  service     Service?  @relation(fields: [serviceId], references: [id])
+  clinicId    String
+  clinic      Clinic    @relation(fields: [clinicId], references: [id])
+  dateTime    DateTime
+  duration    Int       @default(30)
+  status      String    @default("PENDING")
+  type        String    @default("CONSULTATION")
+  isReturn    Boolean   @default(false)
+  insurance   String?
+  value       Float?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Service {
+  // type: CONSULTATION | RETURN | PROCEDURE
+  id                   String                 @id @default(cuid())
+  name                 String
+  duration             Int                    @default(30)
+  value                Float
+  description          String?
+  type                 String                 @default("CONSULTATION")
+  active               Boolean                @default(true)
+  clinicId             String
+  clinic               Clinic                 @relation(fields: [clinicId], references: [id])
+  appointments         Appointment[]
+  pricings             ServicePricing[]
+  insurancePlanServices InsurancePlanService[]
+  scheduleRules        ServiceScheduleRule[]
+  doctorServices       DoctorService[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+}
+
+model DoctorService {
+  id        String   @id @default(cuid())
+  doctorId  String
+  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([doctorId, serviceId])
+  @@index([doctorId])
+  @@index([serviceId])
+}
+
+model ClinicCalendarException {
+  // type: CLOSED | CUSTOM_HOURS ; doctorId null = clínica toda
+  id          String   @id @default(cuid())
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id])
+  date        DateTime @db.Date
+  type        String
+  openingTime String?
+  closingTime String?
+  doctorId    String?
+  note        String?
+  createdAt   DateTime @default(now())
+
+  @@index([clinicId, date])
+}
+
+// paymentMethod: CARD | CASH | INSURANCE
+model ServicePricing {
+  id            String   @id @default(cuid())
+  serviceId     String
+  service       Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  paymentMethod String
+  value         Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([serviceId, paymentMethod])
+}
+
+model InsurancePlan {
+  id        String                 @id @default(cuid())
+  name      String
+  active    Boolean                @default(true)
+  clinicId  String
+  clinic    Clinic                 @relation(fields: [clinicId], references: [id])
+  services  InsurancePlanService[]
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+}
+
+model InsurancePlanService {
+  id              String        @id @default(cuid())
+  insurancePlanId String
+  insurancePlan   InsurancePlan @relation(fields: [insurancePlanId], references: [id], onDelete: Cascade)
+  serviceId       String
+  service         Service       @relation(fields: [serviceId], references: [id])
+  value           Float?
+  cardValue       Float?
+  cashValue       Float?
+  pixValue        Float?
+  createdAt       DateTime      @default(now())
+
+  @@unique([insurancePlanId, serviceId])
+}
+
+model PatientInteraction {
+  // type: APPOINTMENT | CANCELLATION | NO_SHOW | MESSAGE | RETURN | NOTE
+  id          String   @id @default(cuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  type        String
+  description String
+  value       Float?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+model PatientTag {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  tag       String
+  createdAt DateTime @default(now())
+}
+
+model CRMOpportunity {
+  // type:     REACTIVATION | PENDING_RETURN | HIGH_VALUE_FOLLOW_UP | NEW_PATIENT_FOLLOW_UP | COMPLEMENTARY_SERVICE | APPOINTMENT_CONFIRMATION
+  // status:   OPEN | IN_PROGRESS | DONE | DISMISSED
+  // priority: HIGH | MEDIUM | LOW
+  id              String   @id @default(cuid())
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id])
+  clinicId        String
+  clinic          Clinic   @relation(fields: [clinicId], references: [id])
+  type            String
+  reason          String
+  suggestedAction String
+  status          String   @default("OPEN")
+  priority        String   @default("MEDIUM")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model BotConversation {
+  id            String    @id @default(cuid())
+  sessionId     String    @unique
+  patientName   String?
+  patientPhone  String?
+  step          Int       @default(0)
+  data          String?
+  completed     Boolean   @default(false)
+  appointmentId String?
+  clinicId      String?
+  isPaused      Boolean   @default(false)
+  pausedUntil   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// status: PENDING | IN_PROGRESS | RESOLVED
+model HumanTicket {
+  id              String    @id @default(cuid())
+  clinicId        String
+  clinic          Clinic    @relation(fields: [clinicId], references: [id])
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id])
+  conversationId  String?
+  interactionId   String?
+  status          String    @default("PENDING")
+  reason          String?
+  assignedTo      String?
+  resolvedAt      DateTime?
+  resolutionNotes String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([clinicId, status])
+  @@index([patientId])
+  @@index([conversationId])
+}
+
+model ServiceScheduleRule {
+  id            String   @id @default(cuid())
+  clinicId      String
+  clinic        Clinic   @relation(fields: [clinicId], references: [id])
+  serviceId     String
+  service       Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  availableDays String   @default("1,2,3,4,5")
+  maxPerDay     Int?
+  openingTime   String?
+  closingTime   String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([clinicId, serviceId])
+  @@index([serviceId])
+}
