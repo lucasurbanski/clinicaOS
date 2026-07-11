@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { FileSignature, Plus, Trash2, Printer, Loader2, ClipboardList } from "lucide-react";
+import { FileSignature, Plus, Trash2, Printer, Loader2, ClipboardList, MessageCircle, Check } from "lucide-react";
 
 const CLINICAL = ["ADMIN", "DOCTOR", "SUPER_ADMIN"];
 
@@ -16,6 +16,8 @@ export default function PatientPrescriptions({ patientId }: { patientId: string 
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [sending, setSending] = useState<string | null>(null);
+  const [sent, setSent] = useState<Record<string, boolean>>({});
 
   async function load() {
     setLoading(true);
@@ -56,6 +58,16 @@ export default function PatientPrescriptions({ patientId }: { patientId: string 
     if (res.ok && j.url) window.open(j.url, "_blank");
   }
 
+  async function sendWhatsapp(id: string) {
+    setSending(id); setErr(null);
+    try {
+      const res = await fetch(`/api/prescriptions/${id}/send-whatsapp`, { method: "POST" });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "Falha ao enviar");
+      setSent((s) => ({ ...s, [id]: true }));
+    } catch (e: any) { setErr(e.message); } finally { setSending(null); }
+  }
+
   async function remove(id: string) {
     if (!confirm("Excluir esta receita?")) return;
     await fetch(`/api/prescriptions/${id}`, { method: "DELETE" });
@@ -91,6 +103,8 @@ export default function PatientPrescriptions({ patientId }: { patientId: string 
         </div>
       )}
 
+      {!open && err && <p className="text-xs text-red-600 px-5 py-2">{err}</p>}
+
       <div className="divide-y divide-border/50">
         {loading && <p className="text-xs text-muted-foreground text-center py-4">Carregando...</p>}
         {!loading && items.length === 0 && <p className="text-xs text-muted-foreground text-center py-6">Nenhuma receita emitida ainda.</p>}
@@ -100,6 +114,10 @@ export default function PatientPrescriptions({ patientId }: { patientId: string 
               <p className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleDateString("pt-BR")}{r.doctorName ? ` · ${r.doctorName}` : ""}</p>
               <div className="flex items-center gap-1">
                 <button onClick={() => print(r.id)} title="Imprimir / baixar PDF" className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg"><Printer className="w-3.5 h-3.5" /> Imprimir</button>
+                <button onClick={() => sendWhatsapp(r.id)} disabled={sending === r.id} title="Enviar por WhatsApp" className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg disabled:opacity-50">
+                  {sending === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : sent[r.id] ? <Check className="w-3.5 h-3.5" /> : <MessageCircle className="w-3.5 h-3.5" />}
+                  {sending === r.id ? "Enviando" : sent[r.id] ? "Enviado" : "WhatsApp"}
+                </button>
                 <button onClick={() => remove(r.id)} title="Excluir" className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
             </div>
