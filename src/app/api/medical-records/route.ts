@@ -34,8 +34,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Preencha ao menos um campo do prontuário" }, { status: 400 });
   }
 
-  // Snapshot do médico (por padrão o médico logado)
-  const doctorId = body.doctorId || user.doctorId || null;
+  // Atribuição do médico responsável (essencial p/ o isolamento entre médicos).
+  // DOCTOR → sempre o próprio. ADMIN/SUPER_ADMIN → o que veio do form; se não veio
+  // e a clínica só tem 1 médico ativo, usa esse; se tem vários, exige a escolha.
+  let doctorId: string | null = user.role === "DOCTOR" ? user.doctorId || null : body.doctorId || null;
+  if (!doctorId) {
+    const active = await prisma.doctor.findMany({ where: { clinicId, active: true }, select: { id: true } });
+    if (active.length === 1) doctorId = active[0].id;
+    else if (active.length > 1) return NextResponse.json({ error: "Selecione o médico responsável pelo prontuário" }, { status: 400 });
+  }
   let doctorName: string | null = body.doctorName || null;
   if (!doctorName && doctorId) {
     const doc = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { name: true } });

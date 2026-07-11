@@ -42,7 +42,14 @@ export async function POST(req: NextRequest) {
   ]);
   if (!patient || patient.clinicId !== clinicId) return NextResponse.json({ error: "Paciente não encontrado" }, { status: 404 });
 
-  const doctorId = body.doctorId || user.doctorId || null;
+  // Atribuição do médico (essencial p/ isolamento). DOCTOR → próprio; ADMIN → escolha
+  // do form, ou o único médico ativo, senão exige seleção.
+  let doctorId: string | null = user.role === "DOCTOR" ? user.doctorId || null : body.doctorId || null;
+  if (!doctorId) {
+    const active = await prisma.doctor.findMany({ where: { clinicId, active: true }, select: { id: true } });
+    if (active.length === 1) doctorId = active[0].id;
+    else if (active.length > 1) return NextResponse.json({ error: "Selecione o médico responsável pela receita" }, { status: 400 });
+  }
   let doctorName: string | null = null, doctorCrm: string | null = null;
   if (doctorId) {
     const doc = await prisma.doctor.findUnique({ where: { id: doctorId }, select: { name: true, crm: true } });

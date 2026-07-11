@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { FileSignature, Plus, Trash2, Printer, Loader2, ClipboardList, MessageCircle, Check } from "lucide-react";
+import DoctorSelect from "@/components/DoctorSelect";
 
 const CLINICAL = ["ADMIN", "DOCTOR", "SUPER_ADMIN"];
 
@@ -9,11 +10,13 @@ export default function PatientPrescriptions({ patientId }: { patientId: string 
   const { data: session } = useSession();
   const role = (session?.user as any)?.role;
   const allowed = CLINICAL.includes(role);
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState("");
+  const [doctorId, setDoctorId] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [sending, setSending] = useState<string | null>(null);
@@ -44,7 +47,7 @@ export default function PatientPrescriptions({ patientId }: { patientId: string 
     try {
       const res = await fetch("/api/prescriptions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patientId, content }),
+        body: JSON.stringify({ patientId, content, doctorId: doctorId || undefined }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Erro ao salvar");
@@ -86,6 +89,7 @@ export default function PatientPrescriptions({ patientId }: { patientId: string 
 
       {open && (
         <div className="p-5 border-b border-border bg-muted/20 space-y-2.5">
+          {isAdmin && <DoctorSelect value={doctorId} onChange={setDoctorId} label="Médico responsável pela receita" />}
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-muted-foreground">Prescrição (medicamentos / orientações)</label>
             <button onClick={pullFromRecord} className="text-[11px] text-primary hover:underline flex items-center gap-1"><ClipboardList className="w-3 h-3" /> Puxar da conduta</button>

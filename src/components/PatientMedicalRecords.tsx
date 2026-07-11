@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Stethoscope, Plus, Trash2 } from "lucide-react";
+import DoctorSelect from "@/components/DoctorSelect";
 
 const CLINICAL = ["ADMIN", "DOCTOR", "SUPER_ADMIN"];
 const FIELDS: { key: "chiefComplaint" | "evolution" | "assessment" | "plan"; label: string }[] = [
@@ -16,11 +17,13 @@ export default function PatientMedicalRecords({ patientId }: { patientId: string
   const { data: session } = useSession();
   const role = (session?.user as any)?.role;
   const allowed = CLINICAL.includes(role);
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN"; // precisa escolher o médico
 
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ ...EMPTY });
+  const [doctorId, setDoctorId] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -41,7 +44,7 @@ export default function PatientMedicalRecords({ patientId }: { patientId: string
     try {
       const res = await fetch("/api/medical-records", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patientId, ...form }),
+        body: JSON.stringify({ patientId, ...form, doctorId: doctorId || undefined }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Erro ao salvar");
@@ -67,6 +70,7 @@ export default function PatientMedicalRecords({ patientId }: { patientId: string
 
       {open && (
         <div className="p-5 border-b border-border bg-muted/20 space-y-2.5">
+          {isAdmin && <DoctorSelect value={doctorId} onChange={setDoctorId} />}
           {FIELDS.map((f) => (
             <div key={f.key}>
               <label className="text-xs font-medium text-muted-foreground block mb-1">{f.label}</label>
